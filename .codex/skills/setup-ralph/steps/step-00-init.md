@@ -93,7 +93,7 @@ questions:
 
 ```yaml
 {project_path}: "/absolute/path/to/project"
-{ralph_dir}: "{project_path}/.claude/ralph"
+{ralph_dir}: "{project_path}/.codex/ralph"
 {tasks_dir}: "{ralph_dir}/tasks"
 {feature_name}: "01-feature-name"
 {feature_dir}: "{tasks_dir}/{feature_name}"
@@ -134,17 +134,17 @@ fi
 
 ```bash
 # Make script executable and run it
-# Note: Use the skill_dir variable which resolves to ~/.claude/skills/setup-ralph
+# Note: Use the skill_dir variable which resolves to ~/.codex/skills/setup-ralph
 chmod +x {skill_dir}/scripts/setup.sh
 {skill_dir}/scripts/setup.sh "{project_path}" "{feature_name}"
 ```
 
 The setup script creates:
-- `.claude/ralph/ralph.sh` (main loop)
-- `.claude/ralph/prompt.md` (agent instructions)
-- `.claude/ralph/tasks/{feature_name}/PRD.md` (empty template)
-- `.claude/ralph/tasks/{feature_name}/prd.json` (empty stories)
-- `.claude/ralph/tasks/{feature_name}/progress.txt` (learning log)
+- `.codex/ralph/ralph.sh` (main loop)
+- `.codex/ralph/prompt.md` (agent instructions)
+- `.codex/ralph/tasks/{feature_name}/PRD.md` (empty template)
+- `.codex/ralph/tasks/{feature_name}/prd.json` (empty stories)
+- `.codex/ralph/tasks/{feature_name}/progress.txt` (learning log)
 
 ### 7. Determine Next Step
 

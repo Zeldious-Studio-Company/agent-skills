@@ -30,7 +30,7 @@ next_step: null
 
 **Available from previous steps:**
 - `{project_path}` - Absolute path to project
-- `{ralph_dir}` - Path to .claude/ralph
+- `{ralph_dir}` - Path to .codex/ralph
 - `{feature_name}` - Feature folder name
 - `{feature_dir}` - Path to feature folder
 - prd.json exists with user stories
@@ -153,7 +153,7 @@ bun run {ralph_dir}/ralph.sh -f {feature_name}
 1. Make sure you're on a clean git branch
 2. The branch will be: {branchName}
 3. Consider using Docker sandbox for isolation:
-   docker sandbox run claude ./ralph.sh -f {feature_name}
+   docker sandbox run codex ./ralph.sh -f {feature_name}
 ```
 
 ### 8. Final Confirmation

@@ -32,7 +32,7 @@ next_step: steps/step-02-create-stories.md
 
 **Available from step-00:**
 - `{project_path}` - Absolute path to project
-- `{ralph_dir}` - Path to .claude/ralph
+- `{ralph_dir}` - Path to .codex/ralph
 - `{feature_name}` - Feature folder name (e.g., `01-add-auth`)
 - `{feature_dir}` - Path to feature folder
 

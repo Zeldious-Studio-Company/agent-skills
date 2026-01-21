@@ -22,7 +22,7 @@ Set up the Ralph autonomous coding loop in any project. Ralph runs AI agents in 
 ```
 
 **What this does:**
-1. Creates `.claude/ralph/` structure in your project
+1. Creates `.codex/ralph/` structure in your project
 2. Runs setup script to create all Ralph files
 3. (If -i): Brainstorms PRD with you interactively
 4. Transforms PRD into user stories (prd.json)
@@ -30,7 +30,7 @@ Set up the Ralph autonomous coding loop in any project. Ralph runs AI agents in 
 
 **After setup, you run:**
 ```bash
-bun run .claude/ralph/ralph.sh -f <feature-name>
+bun run .codex/ralph/ralph.sh -f <feature-name>
 ```
 </quick_start>
 
@@ -72,7 +72,7 @@ bun run .claude/ralph/ralph.sh -f <feature-name>
 | Variable | Type | Description |
 |----------|------|-------------|
 | `{project_path}` | string | Absolute path to target project |
-| `{ralph_dir}` | string | Path to .claude/ralph in project |
+| `{ralph_dir}` | string | Path to .codex/ralph in project |
 | `{feature_name}` | string | Feature folder name (e.g., `01-add-auth`) |
 | `{feature_dir}` | string | Path to task folder |
 | `{interactive_mode}` | boolean | Whether to brainstorm PRD interactively |
@@ -110,7 +110,7 @@ Load `steps/step-00-init.md`
 </execution_rules>
 
 <success_criteria>
-✅ Ralph structure created at {project_path}/.claude/ralph
+✅ Ralph structure created at {project_path}/.codex/ralph
 ✅ Feature folder created with PRD.md, prd.json, progress.txt
 ✅ User stories properly formatted in prd.json
 ✅ Clear run command provided to user (they run it themselves)

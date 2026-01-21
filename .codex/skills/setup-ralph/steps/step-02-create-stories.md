@@ -29,7 +29,7 @@ next_step: steps/step-03-finish.md
 
 **Available from previous steps:**
 - `{project_path}` - Absolute path to project
-- `{ralph_dir}` - Path to .claude/ralph
+- `{ralph_dir}` - Path to .codex/ralph
 - `{feature_name}` - Feature folder name
 - `{feature_dir}` - Path to feature folder
 - PRD.md exists in `{feature_dir}`
@@ -76,7 +76,7 @@ Create a branch name from the feature:
   ],
   "priority": 1,
   "passes": false,
-  "notes": "Any context Claude needs"
+  "notes": "Any context Codex needs"
 }
 ```
 
@@ -235,7 +235,7 @@ Before saving, verify each story:
 ✅ **Testable** - Clear acceptance criteria
 ✅ **Prioritized** - Dependencies come first
 ✅ **Sized Right** - 5-30 minutes of work
-✅ **Has Context** - Notes explain what Claude needs to know
+✅ **Has Context** - Notes explain what Codex needs to know
 
 ## SUCCESS METRICS:
 

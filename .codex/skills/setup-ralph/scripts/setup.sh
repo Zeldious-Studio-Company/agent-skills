@@ -9,7 +9,7 @@ FEATURE_NAME="${2:-01-feature}"
 
 # Resolve absolute path
 PROJECT_PATH=$(cd "$PROJECT_PATH" && pwd)
-RALPH_DIR="$PROJECT_PATH/.claude/ralph"
+RALPH_DIR="$PROJECT_PATH/.codex/ralph"
 TASKS_DIR="$RALPH_DIR/tasks"
 FEATURE_DIR="$TASKS_DIR/$FEATURE_NAME"
 
@@ -103,7 +103,7 @@ for ((i=1; i<=$MAX_ITERATIONS; i++)); do
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
 
-  # Run Claude with the prompt
+  # Run Codex with the prompt
   OUTPUT=$(claude -p --dangerously-skip-permissions \
     "@$PRD_FILE @$PROGRESS_FILE @$PROMPT_FILE" 2>&1 \
     | tee /dev/stderr) || true
