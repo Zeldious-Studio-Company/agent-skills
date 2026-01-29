@@ -1,6 +1,6 @@
 #!/bin/bash
 # Ralph Setup Script - Creates all Ralph files atomically
-# Usage: ./setup.sh <project-path> [feature-name]
+# Usage: ./setup.ps1 <project-path> [feature-name]
 
 set -e
 
@@ -20,119 +20,143 @@ echo "📁 Feature: $FEATURE_NAME"
 mkdir -p "$RALPH_DIR"
 mkdir -p "$FEATURE_DIR"
 
-# Create ralph.sh (main loop script)
-cat > "$RALPH_DIR/ralph.sh" << 'RALPH_SH'
-#!/bin/bash
+# Create ralph.ps1 (main loop script)
+cat > "$RALPH_DIR/ralph.ps1" << 'RALPH_PS1'
+#!/usr/bin/env pwsh
 # Ralph - Autonomous AI Coding Loop
-# Usage: ./ralph.sh -f <feature-folder> [-n <max-iterations>]
+# Usage: .\ralph.ps1 -Feature <feature-folder> [-MaxIterations <max-iterations>]
 
-set -e
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("f")]
+    [string]$Feature,
+    
+    [Parameter(Mandatory=$false)]
+    [Alias("n")]
+    [int]$MaxIterations = 10
+)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MAX_ITERATIONS=10
-FEATURE_FOLDER=""
+$ErrorActionPreference = "Stop"
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -f|--feature)
-      FEATURE_FOLDER="$2"
-      shift 2
-      ;;
-    -n|--max)
-      MAX_ITERATIONS="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1"
-      echo "Usage: ./ralph.sh -f <feature-folder> [-n <max-iterations>]"
-      exit 1
-      ;;
-  esac
-done
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-if [ -z "$FEATURE_FOLDER" ]; then
-  echo "❌ Error: Feature folder required"
-  echo "Usage: ./ralph.sh -f <feature-folder> [-n <max-iterations>]"
-  echo ""
-  echo "Available features:"
-  ls -1 "$SCRIPT_DIR/tasks/" 2>/dev/null || echo "  No features found. Create one first!"
-  exit 1
-fi
+if ([string]::IsNullOrEmpty($Feature)) {
+    Write-Host "Error: Feature folder required" -ForegroundColor Red
+    Write-Host "Usage: .\ralph.ps1 -Feature <feature-folder> [-MaxIterations <max-iterations>]"
+    Write-Host ""
+    Write-Host "Available features:"
+    $tasksDir = Join-Path $ScriptDir "tasks"
+    if (Test-Path $tasksDir) {
+        Get-ChildItem -Path $tasksDir -Directory | ForEach-Object { Write-Host "  $($_.Name)" }
+    } else {
+        Write-Host "  No features found. Create one first!"
+    }
+    exit 1
+}
 
-TASK_DIR="$SCRIPT_DIR/tasks/$FEATURE_FOLDER"
+$TaskDir = Join-Path $ScriptDir "tasks\$Feature"
 
-if [ ! -d "$TASK_DIR" ]; then
-  echo "❌ Error: Feature folder not found: $TASK_DIR"
-  echo ""
-  echo "Available features:"
-  ls -1 "$SCRIPT_DIR/tasks/" 2>/dev/null || echo "  No features found"
-  exit 1
-fi
+if (-not (Test-Path $TaskDir)) {
+    Write-Host "Error: Feature folder not found: $TaskDir" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Available features:"
+    $tasksDir = Join-Path $ScriptDir "tasks"
+    if (Test-Path $tasksDir) {
+        Get-ChildItem -Path $tasksDir -Directory | ForEach-Object { Write-Host "  $($_.Name)" }
+    } else {
+        Write-Host "  No features found"
+    }
+    exit 1
+}
 
-PRD_FILE="$TASK_DIR/prd.json"
-PROGRESS_FILE="$TASK_DIR/progress.txt"
-PROMPT_FILE="$SCRIPT_DIR/prompt.md"
+$PrdFile = Join-Path $TaskDir "prd.json"
+$ProgressFile = Join-Path $TaskDir "progress.txt"
+$PromptFile = Join-Path $ScriptDir "prompt.md"
 
-if [ ! -f "$PRD_FILE" ]; then
-  echo "❌ Error: prd.json not found in $TASK_DIR"
-  exit 1
-fi
+if (-not (Test-Path $PrdFile)) {
+    Write-Host "Error: prd.json not found in $TaskDir" -ForegroundColor Red
+    exit 1
+}
 
 # Get story counts
-TOTAL_STORIES=$(jq '.userStories | length' "$PRD_FILE")
-COMPLETED=$(jq '[.userStories[] | select(.passes == true)] | length' "$PRD_FILE")
+$prdContent = Get-Content $PrdFile -Raw | ConvertFrom-Json
+$TotalIssues = $prdContent.userStories.Count +
+    $prdContent.bugs.Count +
+    $prdContent.tasks.Count
+$Completed = ($prdContent.userStories | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.bugs | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.tasks | Where-Object { $_.passes -eq $true }).Count
 
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    🤖 RALPH STARTING                       ║"
-echo "╠════════════════════════════════════════════════════════════╣"
-echo "║ Feature: $FEATURE_FOLDER"
-echo "║ Stories: $COMPLETED / $TOTAL_STORIES completed"
-echo "║ Max iterations: $MAX_ITERATIONS"
-echo "╚════════════════════════════════════════════════════════════╝"
-echo ""
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "                   RALPH STARTING                           " -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "Feature: $Feature"
+Write-Host "Issues: $Completed / $TotalIssues completed"
+Write-Host "Max iterations: $MaxIterations"
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host ""
 
-for ((i=1; i<=$MAX_ITERATIONS; i++)); do
-  # Refresh counts
-  COMPLETED=$(jq '[.userStories[] | select(.passes == true)] | length' "$PRD_FILE")
-  REMAINING=$((TOTAL_STORIES - COMPLETED))
+for ($i = 1; $i -le $MaxIterations; $i++) {
+    # Refresh counts
+    $prdContent = Get-Content $PrdFile -Raw | ConvertFrom-Json
+    $Completed = ($prdContent.userStories | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.bugs | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.tasks | Where-Object { $_.passes -eq $true }).Count
+    $Remaining = $TotalIssues - $Completed
 
-  echo ""
-  echo "═══════════════════════════════════════════════════════════════"
-  echo "📍 Iteration $i / $MAX_ITERATIONS | Completed: $COMPLETED / $TOTAL_STORIES | Remaining: $REMAINING"
-  echo "═══════════════════════════════════════════════════════════════"
-  echo ""
+    Write-Host ""
+    Write-Host "===============================================================" -ForegroundColor Yellow
+    Write-Host "Iteration $i / $MaxIterations | Completed: $Completed / $TotalIssues | Remaining: $Remaining" -ForegroundColor Yellow
+    Write-Host "===============================================================" -ForegroundColor Yellow
+    Write-Host ""
 
-  # Run Codex with the prompt
-  OUTPUT=$(claude -p --dangerously-skip-permissions \
-    "@$PRD_FILE @$PROGRESS_FILE @$PROMPT_FILE" 2>&1 \
-    | tee /dev/stderr) || true
+    # Run codex with the prompt (avoid piping so stdout stays a TTY)
+    $output = ""
+    $codexError = $null
+    $transcriptPath = (New-TemporaryFile).FullName
+    try {
+        Start-Transcript -Path $transcriptPath -Force | Out-Null
+        & codex --full-auto -m gpt-5.1-codex-max -c model_reasoning_effort=xhigh "$PrdFile $ProgressFile $PromptFile"
+    } catch {
+        # Continue even if there's an error
+        $codexError = $_.Exception.Message
+    } finally {
+        try { Stop-Transcript | Out-Null } catch { }
+    }
 
-  # Check for completion signal
-  if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║                    ✅ RALPH COMPLETE                       ║"
-    echo "╠════════════════════════════════════════════════════════════╣"
-    echo "║ All $TOTAL_STORIES stories completed in $i iterations!"
-    echo "╚════════════════════════════════════════════════════════════╝"
-    exit 0
-  fi
+    if (Test-Path $transcriptPath) {
+        $output = Get-Content $transcriptPath -Raw
+        Remove-Item $transcriptPath -Force -ErrorAction SilentlyContinue
+    }
+    if ($codexError) {
+        $output = $output + "`n" + $codexError
+    }
 
-  sleep 2
-done
+    # Check for completion signal
+    if ($output -match "<promise>COMPLETE</promise>") {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Green
+        Write-Host "                   RALPH COMPLETE                           " -ForegroundColor Green
+        Write-Host "============================================================" -ForegroundColor Green
+        Write-Host "All $TotalIssues issues completed in $i iterations!"
+        Write-Host "============================================================" -ForegroundColor Green
+        exit 0
+    }
 
-echo ""
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    ⚠️  MAX ITERATIONS                       ║"
-echo "╠════════════════════════════════════════════════════════════╣"
-echo "║ Reached $MAX_ITERATIONS iterations. Run again to continue."
-echo "╚════════════════════════════════════════════════════════════╝"
+    Start-Sleep -Seconds 2
+}
+
+Write-Host ""
+Write-Host "============================================================" -ForegroundColor Yellow
+Write-Host "                   MAX ITERATIONS                           " -ForegroundColor Yellow
+Write-Host "============================================================" -ForegroundColor Yellow
+Write-Host "Reached $MaxIterations iterations. Run again to continue."
+Write-Host "============================================================" -ForegroundColor Yellow
 exit 1
-RALPH_SH
+RALPH_PS1
 
-chmod +x "$RALPH_DIR/ralph.sh"
-echo "✅ Created ralph.sh"
+chmod +x "$RALPH_DIR/ralph.ps1"
+echo "✅ Created ralph.ps1"
 
 # Create prompt.md (agent instructions)
 cat > "$RALPH_DIR/prompt.md" << 'PROMPT_MD'
@@ -274,5 +298,5 @@ echo "║ Next steps:"
 echo "║ 1. Edit PRD.md with your feature requirements"
 echo "║ 2. Run /ralph -i to brainstorm PRD interactively"
 echo "║ 3. Transform PRD to user stories in prd.json"
-echo "║ 4. Run: bun run $RALPH_DIR/ralph.sh -f $FEATURE_NAME"
+echo "║ 4. Run: bun run $RALPH_DIR/ralph.ps1 -f $FEATURE_NAME"
 echo "╚════════════════════════════════════════════════════════════╝"
