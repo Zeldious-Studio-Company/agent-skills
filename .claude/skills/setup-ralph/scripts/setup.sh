@@ -21,115 +21,128 @@ mkdir -p "$RALPH_DIR"
 mkdir -p "$FEATURE_DIR"
 
 # Create ralph.sh (main loop script)
-cat > "$RALPH_DIR/ralph.sh" << 'RALPH_SH'
-#!/bin/bash
+cat > "$RALPH_DIR/ralph.ps1" << 'RALPH_PS1'
+#!/usr/bin/env pwsh
 # Ralph - Autonomous AI Coding Loop
-# Usage: ./ralph.sh -f <feature-folder> [-n <max-iterations>]
+# Usage: .\ralph.ps1 -Feature <feature-folder> [-MaxIterations <max-iterations>]
 
-set -e
+param(
+    [Parameter(Mandatory=$false)]
+    [Alias("f")]
+    [string]$Feature,
+    
+    [Parameter(Mandatory=$false)]
+    [Alias("n")]
+    [int]$MaxIterations = 10
+)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MAX_ITERATIONS=10
-FEATURE_FOLDER=""
+$ErrorActionPreference = "Stop"
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -f|--feature)
-      FEATURE_FOLDER="$2"
-      shift 2
-      ;;
-    -n|--max)
-      MAX_ITERATIONS="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1"
-      echo "Usage: ./ralph.sh -f <feature-folder> [-n <max-iterations>]"
-      exit 1
-      ;;
-  esac
-done
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-if [ -z "$FEATURE_FOLDER" ]; then
-  echo "❌ Error: Feature folder required"
-  echo "Usage: ./ralph.sh -f <feature-folder> [-n <max-iterations>]"
-  echo ""
-  echo "Available features:"
-  ls -1 "$SCRIPT_DIR/tasks/" 2>/dev/null || echo "  No features found. Create one first!"
-  exit 1
-fi
+if ([string]::IsNullOrEmpty($Feature)) {
+    Write-Host "Error: Feature folder required" -ForegroundColor Red
+    Write-Host "Usage: .\ralph.ps1 -Feature <feature-folder> [-MaxIterations <max-iterations>]"
+    Write-Host ""
+    Write-Host "Available features:"
+    $tasksDir = Join-Path $ScriptDir "tasks"
+    if (Test-Path $tasksDir) {
+        Get-ChildItem -Path $tasksDir -Directory | ForEach-Object { Write-Host "  $($_.Name)" }
+    } else {
+        Write-Host "  No features found. Create one first!"
+    }
+    exit 1
+}
 
-TASK_DIR="$SCRIPT_DIR/tasks/$FEATURE_FOLDER"
+$TaskDir = Join-Path $ScriptDir "tasks\$Feature"
 
-if [ ! -d "$TASK_DIR" ]; then
-  echo "❌ Error: Feature folder not found: $TASK_DIR"
-  echo ""
-  echo "Available features:"
-  ls -1 "$SCRIPT_DIR/tasks/" 2>/dev/null || echo "  No features found"
-  exit 1
-fi
+if (-not (Test-Path $TaskDir)) {
+    Write-Host "Error: Feature folder not found: $TaskDir" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Available features:"
+    $tasksDir = Join-Path $ScriptDir "tasks"
+    if (Test-Path $tasksDir) {
+        Get-ChildItem -Path $tasksDir -Directory | ForEach-Object { Write-Host "  $($_.Name)" }
+    } else {
+        Write-Host "  No features found"
+    }
+    exit 1
+}
 
-PRD_FILE="$TASK_DIR/prd.json"
-PROGRESS_FILE="$TASK_DIR/progress.txt"
-PROMPT_FILE="$SCRIPT_DIR/prompt.md"
+$PrdFile = Join-Path $TaskDir "prd.json"
+$ProgressFile = Join-Path $TaskDir "progress.txt"
+$PromptFile = Join-Path $ScriptDir "prompt.md"
 
-if [ ! -f "$PRD_FILE" ]; then
-  echo "❌ Error: prd.json not found in $TASK_DIR"
-  exit 1
-fi
+if (-not (Test-Path $PrdFile)) {
+    Write-Host "Error: prd.json not found in $TaskDir" -ForegroundColor Red
+    exit 1
+}
 
 # Get story counts
-TOTAL_STORIES=$(jq '.userStories | length' "$PRD_FILE")
-COMPLETED=$(jq '[.userStories[] | select(.passes == true)] | length' "$PRD_FILE")
+$prdContent = Get-Content $PrdFile -Raw | ConvertFrom-Json
+$TotalIssues = $prdContent.userStories.Count +
+    $prdContent.bugs.Count +
+    $prdContent.tasks.Count
+$Completed = ($prdContent.userStories | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.bugs | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.tasks | Where-Object { $_.passes -eq $true }).Count
 
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    🤖 RALPH STARTING                       ║"
-echo "╠════════════════════════════════════════════════════════════╣"
-echo "║ Feature: $FEATURE_FOLDER"
-echo "║ Stories: $COMPLETED / $TOTAL_STORIES completed"
-echo "║ Max iterations: $MAX_ITERATIONS"
-echo "╚════════════════════════════════════════════════════════════╝"
-echo ""
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "                   RALPH STARTING                           " -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "Feature: $Feature"
+Write-Host "Issues: $Completed / $TotalIssues completed"
+Write-Host "Max iterations: $MaxIterations"
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host ""
 
-for ((i=1; i<=$MAX_ITERATIONS; i++)); do
-  # Refresh counts
-  COMPLETED=$(jq '[.userStories[] | select(.passes == true)] | length' "$PRD_FILE")
-  REMAINING=$((TOTAL_STORIES - COMPLETED))
+for ($i = 1; $i -le $MaxIterations; $i++) {
+    # Refresh counts
+    $prdContent = Get-Content $PrdFile -Raw | ConvertFrom-Json
+    $Completed = ($prdContent.userStories | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.bugs | Where-Object { $_.passes -eq $true }).Count +
+    ($prdContent.tasks | Where-Object { $_.passes -eq $true }).Count
+    $Remaining = $TotalIssues - $Completed
 
-  echo ""
-  echo "═══════════════════════════════════════════════════════════════"
-  echo "📍 Iteration $i / $MAX_ITERATIONS | Completed: $COMPLETED / $TOTAL_STORIES | Remaining: $REMAINING"
-  echo "═══════════════════════════════════════════════════════════════"
-  echo ""
+    Write-Host ""
+    Write-Host "===============================================================" -ForegroundColor Yellow
+    Write-Host "Iteration $i / $MaxIterations | Completed: $Completed / $TotalIssues | Remaining: $Remaining" -ForegroundColor Yellow
+    Write-Host "===============================================================" -ForegroundColor Yellow
+    Write-Host ""
 
-  # Run Claude with the prompt
-  OUTPUT=$(claude -p --dangerously-skip-permissions \
-    "@$PRD_FILE @$PROGRESS_FILE @$PROMPT_FILE" 2>&1 \
-    | tee /dev/stderr) || true
+    # Run claude with the prompt
+    try {
+        $output = (& claude -p --dangerously-skip-permissions "$PrdFile $ProgressFile $PromptFile" 2>&1 | ForEach-Object { 
+            Write-Host $_
+            $_
+        }) -join "`n"
+    } catch {
+        # Continue even if there's an error
+        $output = $_.Exception.Message
+    }
 
-  # Check for completion signal
-  if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║                    ✅ RALPH COMPLETE                       ║"
-    echo "╠════════════════════════════════════════════════════════════╣"
-    echo "║ All $TOTAL_STORIES stories completed in $i iterations!"
-    echo "╚════════════════════════════════════════════════════════════╝"
-    exit 0
-  fi
+    # Check for completion signal
+    if ($output -match "<promise>COMPLETE</promise>") {
+        Write-Host ""
+        Write-Host "============================================================" -ForegroundColor Green
+        Write-Host "                   RALPH COMPLETE                           " -ForegroundColor Green
+        Write-Host "============================================================" -ForegroundColor Green
+        Write-Host "All $TotalIssues issues completed in $i iterations!"
+        Write-Host "============================================================" -ForegroundColor Green
+        exit 0
+    }
 
-  sleep 2
-done
+    Start-Sleep -Seconds 2
+}
 
-echo ""
-echo "╔════════════════════════════════════════════════════════════╗"
-echo "║                    ⚠️  MAX ITERATIONS                       ║"
-echo "╠════════════════════════════════════════════════════════════╣"
-echo "║ Reached $MAX_ITERATIONS iterations. Run again to continue."
-echo "╚════════════════════════════════════════════════════════════╝"
+Write-Host ""
+Write-Host "============================================================" -ForegroundColor Yellow
+Write-Host "                   MAX ITERATIONS                           " -ForegroundColor Yellow
+Write-Host "============================================================" -ForegroundColor Yellow
+Write-Host "Reached $MaxIterations iterations. Run again to continue."
+Write-Host "============================================================" -ForegroundColor Yellow
 exit 1
-RALPH_SH
+RALPH_PS1
 
 chmod +x "$RALPH_DIR/ralph.sh"
 echo "✅ Created ralph.sh"
@@ -145,16 +158,16 @@ You are an autonomous AI coding agent running in a loop. Each iteration, you imp
 ## Execution Sequence
 
 1. **Read Context**
-   - Read the PRD (prd.json) to understand all user stories
+   - Read the PRD (prd.json) to understand all items (userStories, bugs, tasks)
    - Read progress.txt to see patterns and learnings from previous iterations
-   - Identify the **highest priority** story where `passes: false`
+   - Identify the **highest priority** item where `passes: false` (check userStories, bugs, AND tasks)
 
 2. **Check Git Branch**
    - Verify you're on the correct branch (see `branchName` in prd.json)
    - If not, checkout the branch: `git checkout <branchName>` or create it
 
 3. **Implement ONE Story**
-   - Focus on implementing ONLY the selected story
+   - Focus on implementing ONLY the selected item (story, bug, or task)
    - Follow the acceptance criteria exactly
    - Make minimal changes to achieve the goal
 
@@ -169,7 +182,7 @@ You are an autonomous AI coding agent running in a loop. Each iteration, you imp
    - Example: `feat: US-001 - Add login form validation`
 
 6. **Update PRD**
-   - Update prd.json to mark the story as `passes: true`
+   - Update prd.json to mark the item as `passes: true`
    - Add any notes about the implementation
 
 7. **Log Learnings**
@@ -194,7 +207,7 @@ Check the TOP of progress.txt for patterns discovered by previous iterations:
 
 ## Stop Condition
 
-**If ALL stories have `passes: true`**, output this exact text:
+**If ALL items (userStories, bugs, tasks) have `passes: true`**, output this exact text:
 
 <promise>COMPLETE</promise>
 
@@ -202,7 +215,7 @@ This signals the loop to stop.
 
 ## Critical Rules
 
-- 🛑 NEVER implement more than ONE story per iteration
+- 🛑 NEVER implement more than ONE item per iteration
 - 🛑 NEVER skip the verification step (typecheck/tests)
 - 🛑 NEVER commit if tests are failing
 - ✅ ALWAYS check progress.txt for patterns FIRST
