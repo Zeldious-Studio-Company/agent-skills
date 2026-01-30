@@ -116,7 +116,15 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
     $transcriptPath = (New-TemporaryFile).FullName
     try {
         Start-Transcript -Path $transcriptPath -Force | Out-Null
-        & codex --full-auto -m gpt-5.1-codex-max -c model_reasoning_effort=xhigh "$PrdFile $ProgressFile $PromptFile"
+        
+        # Use a single long-lived Codex exec session across iterations.
+        # First iteration: start a new non-interactive session.
+        # Next iterations: resume the most recent session for this working directory.
+        if ($i -eq 1) {
+            & codex exec --full-auto -m gpt-5.1-codex-max -c model_reasoning_effort=xhigh "$PrdFile $ProgressFile $PromptFile"
+        } else {
+            & codex exec --full-auto -m gpt-5.1-codex-max -c model_reasoning_effort=xhigh resume --last "$PrdFile $ProgressFile $PromptFile"
+        }
     } catch {
         # Continue even if there's an error
         $codexError = $_.Exception.Message
@@ -169,16 +177,16 @@ You are an autonomous AI coding agent running in a loop. Each iteration, you imp
 ## Execution Sequence
 
 1. **Read Context**
-   - Read the PRD (prd.json) to understand all user stories
+   - Read the PRD (prd.json) to understand all items (userStories, bugs, tasks)
    - Read progress.txt to see patterns and learnings from previous iterations
-   - Identify the **highest priority** story where `passes: false`
+   - Identify the **highest priority** item where `passes: false` (check userStories, bugs, AND tasks)
 
 2. **Check Git Branch**
    - Verify you're on the correct branch (see `branchName` in prd.json)
    - If not, checkout the branch: `git checkout <branchName>` or create it
 
 3. **Implement ONE Story**
-   - Focus on implementing ONLY the selected story
+   - Focus on implementing ONLY the selected item (story, bug, or task)
    - Follow the acceptance criteria exactly
    - Make minimal changes to achieve the goal
 
@@ -193,7 +201,7 @@ You are an autonomous AI coding agent running in a loop. Each iteration, you imp
    - Example: `feat: US-001 - Add login form validation`
 
 6. **Update PRD**
-   - Update prd.json to mark the story as `passes: true`
+   - Update prd.json to mark the item as `passes: true`
    - Add any notes about the implementation
 
 7. **Log Learnings**
@@ -218,7 +226,7 @@ Check the TOP of progress.txt for patterns discovered by previous iterations:
 
 ## Stop Condition
 
-**If ALL stories have `passes: true`**, output this exact text:
+**If ALL items (userStories, bugs, tasks) have `passes: true`**, output this exact text:
 
 <promise>COMPLETE</promise>
 
@@ -226,7 +234,7 @@ This signals the loop to stop.
 
 ## Critical Rules
 
-- 🛑 NEVER implement more than ONE story per iteration
+- 🛑 NEVER implement more than ONE item per iteration
 - 🛑 NEVER skip the verification step (typecheck/tests)
 - 🛑 NEVER commit if tests are failing
 - ✅ ALWAYS check progress.txt for patterns FIRST
