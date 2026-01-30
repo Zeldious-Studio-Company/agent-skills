@@ -174,6 +174,8 @@ cat > "$RALPH_DIR/prompt.md" << 'PROMPT_MD'
 
 You are an autonomous AI coding agent running in a loop. Each iteration, you implement ONE user story from the PRD.
 
+En utilisant /apex, applique le workflow Apex pour chaque iteration.
+
 ## Execution Sequence
 
 1. **Read Context**
