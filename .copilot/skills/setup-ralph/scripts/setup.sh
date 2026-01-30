@@ -144,8 +144,8 @@ Write-Host "============================================================" -Foreg
 exit 1
 RALPH_PS1
 
-chmod +x "$RALPH_DIR/ralph.sh"
-echo "✅ Created ralph.sh"
+chmod +x "$RALPH_DIR/ralph.ps1"
+echo "✅ Created ralph.ps1"
 
 # Create prompt.md (agent instructions)
 cat > "$RALPH_DIR/prompt.md" << 'PROMPT_MD'
@@ -287,5 +287,5 @@ echo "║ Next steps:"
 echo "║ 1. Edit PRD.md with your feature requirements"
 echo "║ 2. Run /ralph -i to brainstorm PRD interactively"
 echo "║ 3. Transform PRD to user stories in prd.json"
-echo "║ 4. Run: bun run $RALPH_DIR/ralph.sh -f $FEATURE_NAME"
+echo "║ 4. Run: bun run $RALPH_DIR/ralph.ps1 -f $FEATURE_NAME"
 echo "╚════════════════════════════════════════════════════════════╝"
