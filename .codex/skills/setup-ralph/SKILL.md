@@ -30,7 +30,7 @@ Set up the Ralph autonomous coding loop in any project. Ralph runs AI agents in 
 
 **After setup, you run:**
 ```bash
-bun run .codex/ralph/ralph.sh -f <feature-name>
+bun run .codex/ralph/ralph.ps1 -f <feature-name>
 ```
 </quick_start>
 
