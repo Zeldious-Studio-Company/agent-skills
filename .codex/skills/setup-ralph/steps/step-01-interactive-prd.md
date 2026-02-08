@@ -12,7 +12,7 @@ next_step: steps/step-02-create-stories.md
 - 🛑 NEVER generate content without user input - you're a FACILITATOR
 - 🛑 NEVER be too technical - focus on WHAT and WHY, not HOW
 - 🛑 NEVER write final PRD without user approval
-- 🛑 NEVER run ralph.sh - only create PRD files
+- 🛑 NEVER run ralph.ps1 - only create PRD files
 - ✅ ALWAYS brainstorm collaboratively - ask, listen, refine
 - ✅ ALWAYS use parallel exploration to understand codebase context
 - ✅ ALWAYS let user validate each section before continuing
@@ -341,7 +341,7 @@ Offer these techniques:
 ❌ Not offering A/P/C menus at each phase
 ❌ Making assumptions without asking
 ❌ Creating huge stories (each should be 5-30 min)
-❌ Running ralph.sh (user runs it themselves!)
+❌ Running ralph.ps1 (user runs it themselves!)
 
 ## FACILITATOR PROTOCOLS:
 

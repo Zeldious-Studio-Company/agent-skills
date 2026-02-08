@@ -172,61 +172,45 @@ cat > "$RALPH_DIR/prompt.md" << 'PROMPT_MD'
 
 ## Your Task
 
-You are an autonomous AI coding agent running in a loop. Each iteration, you implement ONE item from the PRD using the APEX workflow skill (`/apex`).
+You are an autonomous AI coding agent running in a loop. Each iteration, you implement ONE user story from the PRD.
 
 ## Execution Sequence
 
 1. **Read Context**
-   - Read the PRD (prd.json) to understand all items in `userStories` array
+   - Read the PRD (prd.json) to understand all items (userStories, bugs, tasks)
    - Read progress.txt to see patterns and learnings from previous iterations
-   - Identify the **highest priority** item where `passes: false`
+   - Identify the **highest priority** item where `passes: false` (check userStories, bugs, AND tasks)
 
-2. **Check Completion**
-   - If ALL items in `userStories` have `passes: true`, output this exact text and STOP:
-     `<promise>COMPLETE</promise>`
+2. **Check Git Branch**
+   - Verify you're on the correct branch (see `branchName` in prd.json)
+   - If not, checkout the branch: `git checkout <branchName>` or create it
 
-3. **Determine APEX Flags**
-   - Count how many items still have `passes: false`
-   - Base flags (always): `-a -x -s -t -b`
-   - If this is the **LAST remaining item** (only 1 left with `passes: false`): add `-pr`
-   - Otherwise: do NOT add `-pr`
+3. **Implement ONE Story**
+   - Focus on implementing ONLY the selected item (story, bug, or task)
+   - Follow the acceptance criteria exactly
+   - Make minimal changes to achieve the goal
 
-4. **Build the Task Description**
-   - From the selected item, construct a description:
-     `[ID]: [Title]. Acceptance Criteria: [AC1], [AC2], ...`
-   - Example: `US-001: Add login form validation. Acceptance Criteria: Form validates email format, Password minimum 8 chars, Error messages displayed inline`
+4. **Verify Quality**
+   - Run typecheck (if applicable): `pnpm tsc --noEmit` or `npm run typecheck`
+   - Run tests (if applicable): `pnpm test` or `npm test`
+   - Fix any issues before proceeding
 
-5. **Run /apex**
-   - Execute the APEX skill with the constructed command:
-     - Normal item: `/apex -a -x -s -t -b [task description]`
-     - Last item:   `/apex -a -x -s -t -b -pr [task description]`
-   - The APEX workflow will handle: analyze, plan, execute, validate, test, examine, and resolve
-   - Let APEX complete its full workflow before continuing
+5. **Commit Changes**
+   - Stage your changes: `git add .`
+   - Commit with format: `feat: [STORY-ID] - [Title]`
+   - Example: `feat: US-001 - Add login form validation`
 
-6. **Verify APEX Success**
-   - After /apex finishes, verify the implementation actually works:
-     - Check that APEX completed all steps (validate + examine passed)
-     - Run a quick sanity check: does the code compile? Do tests pass?
-   - If APEX FAILED or left issues unresolved:
-     - Do NOT mark the item as `passes: true`
-     - Log the failure in progress.txt with details
-     - Continue to the next iteration (Ralph loop will retry or move on)
-   - If APEX SUCCEEDED:
-     - Proceed to step 7
+6. **Update PRD**
+   - Update prd.json to mark the item as `passes: true`
+   - Add any notes about the implementation
 
-7. **Update PRD**
-   - ONLY after verifying APEX succeeded, update prd.json:
-     - Set `passes: true` on the implemented item
-     - Add implementation notes if relevant
-
-8. **Log Learnings**
+7. **Log Learnings**
    - Append to progress.txt with format:
 
 ```
-## [Date] - [Item ID]: [Title]
-- Implemented via /apex workflow
-- Status: SUCCESS or FAILED
-- Files changed: [list from APEX output]
+## [Date] - [Story ID]: [Title]
+- What was implemented
+- Files changed
 - **Learnings:**
   - Patterns discovered
   - Gotchas encountered
@@ -240,24 +224,22 @@ Check the TOP of progress.txt for patterns discovered by previous iterations:
 - Add new patterns when you discover them
 - Update patterns if they're outdated
 
-## Error Recovery
+## Stop Condition
 
-If something goes wrong during an iteration:
-- **APEX fails to complete**: Log the failure, do NOT mark passes=true, continue loop
-- **Tests fail after APEX**: Attempt to fix, if unable then log and continue
-- **Git conflicts**: Resolve conflicts before proceeding, log resolution in progress.txt
-- **Branch issues**: Verify branch exists, create if needed, never work on main
+**If ALL items (userStories, bugs, tasks) have `passes: true`**, output this exact text:
+
+<promise>COMPLETE</promise>
+
+This signals the loop to stop.
 
 ## Critical Rules
 
 - 🛑 NEVER implement more than ONE item per iteration
-- 🛑 ALWAYS use /apex to implement each item (never implement manually)
-- 🛑 NEVER add -pr flag unless this is the LAST remaining item
-- 🛑 NEVER mark passes=true unless APEX completed successfully
+- 🛑 NEVER skip the verification step (typecheck/tests)
+- 🛑 NEVER commit if tests are failing
 - ✅ ALWAYS check progress.txt for patterns FIRST
-- ✅ ALWAYS verify APEX success before updating prd.json
+- ✅ ALWAYS update prd.json after implementing
 - ✅ ALWAYS append learnings to progress.txt
-- ✅ ALWAYS check completion BEFORE starting a new item
 PROMPT_MD
 
 echo "✅ Created prompt.md"
